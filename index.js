@@ -8,7 +8,7 @@ const clearScreen = () => {
   ctx.rect(0, 0, canvasWidth, canvasHeight)
   ctx.fill()
   ctx.strokeStyle = "#20FF20"
-  ctx.lineWidth = 4
+  ctx.lineWidth = 5
   ctx.strokeRect(0, 0, canvasWidth, canvasHeight)
 }
 
