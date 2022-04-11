@@ -1,0 +1,15 @@
+*{
+    padding: 0;
+    margin: 0;
+}
+
+div.ctn{
+    display:grid;
+    place-content: center;
+    height: 100vh;
+}
+
+@font-face {
+    font-family: 'Arcade';
+    src: url('./assets/VCR_OSD_MONO.ttf');
+}
