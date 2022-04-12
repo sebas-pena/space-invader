@@ -129,7 +129,6 @@ printHud()
 
 const player = new Player()
 const ismoving = false
-
 window.addEventListener("keydown", ({ key }) => {
   console.log("algo")
   console.log("algo2")
