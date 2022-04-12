@@ -2,127 +2,287 @@ const canvas = document.querySelector("canvas")
 const ctx = canvas.getContext("2d")
 const canvasHeight = 500
 const canvasWidth = 500
-let projectiles = []
+
+let playerProjectiles = []
+let enemyProjectiles = []
 
 const clearScreen = () => {
-  ctx.fillStyle = "#000"
-  ctx.rect(0, 0, canvasWidth, canvasHeight)
-  ctx.fill()
-  ctx.strokeStyle = "#20FF20"
-  ctx.lineWidth = 5
-  ctx.strokeRect(0, 0, canvasWidth, canvasHeight)
+	ctx.fillStyle = "#000"
+	ctx.fillRect(0, 0, canvasWidth, canvasHeight)
 }
 const printHud = (score, hiScore, lives) => {
-  ctx.fillStyle = "#fff"
-  ctx.font = "400 20px Arcade"
-  ctx.textAlign = "start"
-  ctx.fillText("SCORE", 30, 30)
-  ctx.textAlign = "center"
-  ctx.fillText("HI-SCORE", canvasWidth / 2, 30)
-  ctx.fillText(hiScore, canvasWidth / 2, 50)
-  ctx.textAlign = "start"
-  ctx.font = "500 18px Arcade"
-  ctx.fillText(score, 30, 50)
-  ctx.fillText(lives, 30, canvasHeight - 15)
-  ctx.textAlign = "end"
-  ctx.fillText("CREDIT 00", canvasWidth - 30, canvasHeight - 15)
-  ctx.moveTo(30, canvasHeight - 40)
-  ctx.strokeStyle = "#20FF20"
-  ctx.lineWidth = 2
-  ctx.lineTo(canvasWidth - 30, canvasHeight - 40)
-  ctx.stroke()
+	ctx.fillStyle = "#fff"
+	ctx.font = "400 20px Arcade"
+	ctx.textAlign = "start"
+	ctx.fillText("SCORE", 30, 30)
+	ctx.textAlign = "center"
+	ctx.fillText("HI-SCORE", canvasWidth / 2, 30)
+	ctx.fillText(hiScore, canvasWidth / 2, 50)
+	ctx.textAlign = "start"
+	ctx.font = "500 18px Arcade"
+	ctx.fillText(score, 30, 50)
+	ctx.fillText(lives, 30, canvasHeight - 15)
+	ctx.textAlign = "end"
+	ctx.fillText("CREDIT 00", canvasWidth - 30, canvasHeight - 15)
+	ctx.moveTo(30, canvasHeight - 40)
+	ctx.strokeStyle = "#20FF20"
+	ctx.lineWidth = 2
+	ctx.lineTo(canvasWidth - 30, canvasHeight - 40)
+	ctx.stroke()
 }
 const startGame = () => {
-  ctx.drawImage(playerSprite, 100, 100)
-  ctx.drawImage(enemySprite, 150, 150)
-  ctx.drawImage(enemy2Sprite, 200, 200)
-  ctx.drawImage(enemy3Sprite, 250, 250)
-  ctx.drawImage(enemyShipSprite, 300, 300)
+	ctx.drawImage(playerSprite, 100, 100)
+	ctx.drawImage(enemySprite, 150, 150)
+	ctx.drawImage(enemy2Sprite, 200, 200)
+	ctx.drawImage(enemy3Sprite, 250, 250)
+	ctx.drawImage(enemyShipSprite, 300, 300)
 }
 
 class Player {
-  constructor() {
-    this.positionX = canvasWidth / 2 - 8
-    this.velocity = 0
-    const sprite = new Image()
-    sprite.src = "./assets/sprites/player.png"
-    sprite.onload = () => {
-      this.sprite = sprite
-      this.draw()
-    }
-  }
-  shot() {
-    const Xaxis = this.positionX + 15
-    const Yaxis = 19
-  }
+	constructor() {
+		this.positionX = canvasWidth / 2 - 8
+		this.velocity = 0
+		this.shootCooldown = false
+		const sprite = new Image()
+		sprite.src = "./assets/sprites/player.png"
+		sprite.onload = () => {
+			this.sprite = sprite
+			this.draw()
+		}
+	}
+	shot() {
+		if (!this.shootCooldown) {
+			const Xaxis = this.positionX + 13
+			const Yaxis = 425
+			const projectile = new Projectile(2, Xaxis, Yaxis, -1)
+			playerProjectiles.push(projectile)
+			this.shootCooldown = true
+			setTimeout(() => {
+				this.shootCooldown = false
+			}, 1000)
+		}
+	}
 
-  setPosition() {
-    const newPosition = this.positionX + this.velocity * 5
+	setPosition() {
+		const newPosition = this.positionX + this.velocity * 5
 
-    if (newPosition > 30 && newPosition < canvasWidth - 60) {
-      this.positionX = newPosition
-    }
-  }
+		if (newPosition > 30 && newPosition < canvasWidth - 60) {
+			this.positionX = newPosition
+		}
+	}
 
-  draw() {
-    if (this.sprite) {
-      ctx.fillStyle = "#000"
-      ctx.fillRect(this.positionX, canvasHeight - 60, 30, 16)
-      this.setPosition()
-      ctx.drawImage(this.sprite, this.positionX, canvasHeight - 60)
-    }
-  }
+	draw() {
+		if (this.sprite) {
+			ctx.fillStyle = "#000"
+			ctx.fillRect(this.positionX - 1, canvasHeight - 60, 32, 16)
+			this.setPosition()
+			ctx.drawImage(this.sprite, this.positionX, canvasHeight - 60)
+		}
+	}
 }
 
 class Projectile {
-  constructor(type, positionX, positionY, velocity) {
-    this.positionX = positionX
-    this.positionY = positionY
-    this.velocity = velocity
+	constructor(type, positionX, positionY, velocity) {
+		this.positionX = positionX
+		this.positionY = positionY
+		this.spriteWidth = 5
+		this.spriteHeight = 17
+		this.velocity = velocity
+		this.type = type
+		if (type == 1) {
+			this.spriteLenght = 2
+		} else if (type == 2) {
+			this.spriteLenght = 8
+		}
+		this.actualFrame = 0
+		const sprite = new Image()
+		sprite.src = `./assets/sprites/projectile${type}.png`
+		sprite.onload = () => {
+			this.sprite = sprite
+		}
+	}
+	draw() {
+		if (this.sprite) {
+			ctx.drawImage(
+				this.sprite,
+				this.spriteWidth * this.actualFrame,
+				0,
+				this.spriteWidth,
+				this.spriteHeight,
+				this.positionX,
+				this.positionY,
+				this.spriteWidth,
+				this.spriteHeight
+			)
+		}
+		if (this.actualFrame == this.spriteLenght) {
+			this.actualFrame = 0
+		} else {
+			this.actualFrame++
+		}
 
-    const sprite = new Image()
-    sprite.src = `./assets/sprites/projectile${type}.png`
-    sprite.onload = () => {
-      this.sprite = sprite
-    }
-  }
-  draw() {
-    if (this.sprite) {
-      ctx.drawImage(this.sprite, this.positionX, this.positionY)
-    }
-  }
-
-  update() {
-    const newPositionY = this.positionY + this.velocity * 3
-    if (newPositionY < 470 && newPositionY > 60) {
-      ctx.fillStyle = "#000"
-      ctx.fillRect(this.positionX, this.positionY, 10, 17)
-      this.positionX = this.positionX
-      this.positionY = newPositionY
-      this.draw()
-    }
-  }
+		if (this.type == 2) {
+			this.actualFrame = Math.floor(this.spriteLenght * Math.random() + 1)
+		}
+	}
+	clear() {
+		ctx.fillStyle = "#000"
+		ctx.fillRect(
+			this.positionX,
+			this.positionY,
+			this.spriteWidth,
+			this.spriteHeight
+		)
+	}
+	update() {
+		const newPositionY = this.positionY + this.velocity * 6
+		ctx.fillStyle = "#000"
+		ctx.fillRect(this.positionX, this.positionY, 10, 17)
+		if (newPositionY < 470 && newPositionY > 60) {
+			this.positionX = this.positionX
+			this.positionY = newPositionY
+			this.draw()
+		} else {
+			return "remove"
+		}
+	}
 }
 class Enemy {
-  constructor(type) {
-    const sprite = new Image()
-    sprite.src = `enemy${type}.png`
-    sprite.onload = () => {
-      this.sprite = sprite
-    }
-  }
+	constructor(type) {
+		if (type == 1) {
+			this.spriteWidth = 16
+		} else if (type == 2) {
+			this.spriteWidth = 22
+		} else {
+			this.spriteWidth = 24
+		}
+		this.spriteHeight = 16
+		this.actualFrame = 0
+		this.status = "alive"
+		const sprite = new Image()
+		sprite.src = `./assets/sprites/enemy${type}.png`
+		sprite.onload = () => {
+			this.sprite = sprite
+		}
+		this.explodeSprite = new Image()
+		this.explodeSprite.src = "./assets/sprites/explosion.png"
+	}
 
-  shot() {}
-  draw() {
-    if (this.sprite) {
-      ctx.drawImage(this.sprite, 100, 100)
-    }
-  }
+	shot() {}
+	clear() {
+		ctx.fillStyle = "#000"
+		ctx.fillRect(
+			this.positionX,
+			this.positionY,
+			this.spriteWidth,
+			this.spriteHeight
+		)
+	}
+	explode() {
+		this.clear()
+		this.status = "dead"
+		this.sprite = this.explodeSprite
+		this.spriteHeight = 14
+		this.spriteWidth = 24
+		this.draw()
+		setTimeout(() => {
+			this.clear()
+		}, 500)
+	}
+	update(positionX, positionY) {
+		if (this.sprite && this.status == "alive") {
+			this.clear()
+			this.positionX = positionX
+			this.positionY = positionY
+			this.draw()
+		}
+		if (this.actualFrame == 0) this.actualFrame++
+		else this.actualFrame--
+	}
+	checkColisions() {}
+	draw() {
+		ctx.drawImage(
+			this.sprite,
+			this.spriteWidth * this.actualFrame,
+			0,
+			this.spriteWidth,
+			this.spriteHeight,
+			this.positionX,
+			this.positionY,
+			this.spriteWidth,
+			this.spriteHeight
+		)
+	}
 }
 
-class EnemyWave {
-  constructor(type) {}
-  draw() {}
+class EnemyShip {
+	constructor() {
+		this.positionX = canvasWidth
+		this.positionY = 60
+		this.velocity = -1
+		this.delaySpawn()
+		const sprite = new Image()
+		sprite.src = "./assets/sprites/enemy-ship.png"
+		sprite.onload = () => {
+			this.sprite = sprite
+			this.draw()
+		}
+	}
+
+	delaySpawn() {
+		setTimeout(() => {
+			this.visible = true
+			this.positionX = canvasWidth
+		}, Math.floor(Math.random() * 30000))
+	}
+
+	clear() {
+		ctx.fillStyle = "#000"
+		ctx.fillRect(this.positionX, this.positionY, 32, 14)
+	}
+	update() {
+		if (this.visible) {
+			this.clear()
+			const newPosition = this.positionX + this.velocity * 5
+			if (newPosition > -32) {
+				this.positionX = newPosition
+				this.draw()
+			} else {
+				this.clear()
+				this.visible = false
+				this.delaySpawn()
+			}
+		}
+	}
+
+	draw() {
+		if (this.sprite) {
+			ctx.drawImage(this.sprite, this.positionX, this.positionY)
+		}
+	}
+}
+
+class EnemyColumn {
+	constructor(positionX, velocity) {
+		this.positionX = positionX
+		this.velocity = velocity
+		this.enemies = [
+			new Enemy(3),
+			new Enemy(3),
+			new Enemy(2),
+			new Enemy(2),
+			new Enemy(1),
+		]
+	}
+	positionY = 300
+	update() {
+		this.enemies.forEach((enemy, index) => {
+			setTimeout(() => {
+				enemy.update(this.positionX, this.positionY - index * 40)
+			}, index * 100)
+		})
+		this.positionX += this.velocity * 10
+	}
 }
 clearScreen()
 printHud()
@@ -130,27 +290,93 @@ printHud()
 const player = new Player()
 const ismoving = false
 
+// controls
 window.addEventListener("keydown", ({ key }) => {
-  console.log("algo")
-  console.log("algo2")
-  if (key == "ArrowLeft" || key == "a") {
-    player.velocity = -1
-  } else if (key == "ArrowRight" || key == "d") {
-    player.velocity = 1
-  } else if ((key = " ")) {
-    const shoot = new Projectile(1, 250, 400, -1)
-    projectiles.push(shoot)
-    console.log(projectiles)
-  }
+	if (key == "ArrowLeft" || key == "a") {
+		player.velocity = -1
+	} else if (key == "ArrowRight" || key == "d") {
+		player.velocity = 1
+	} else if (key == "x") {
+		player.shot()
+	}
 })
 
-window.addEventListener("keyup", () => {
-  player.velocity = 0
+window.addEventListener("keyup", ({ key }) => {
+	if (key == "ArrowLeft" || key == "a" || key == "ArrowRight" || key == "d") {
+		player.velocity = 0
+	}
 })
+
+const enemyShip = new EnemyShip()
+const enemyGrid = [
+	new EnemyColumn(50, 1),
+	new EnemyColumn(100, 1),
+	new EnemyColumn(150, 1),
+	new EnemyColumn(200, 1),
+	new EnemyColumn(250, 1),
+	new EnemyColumn(300, 1),
+	new EnemyColumn(350, 1),
+]
+
+const checkEnemyColisions = () => {
+	if (playerProjectiles.length > 0) {
+		playerProjectiles.forEach((projectile, projectileIndex) => {
+			enemyGrid[0].enemies.forEach((enemy) => {
+				if (enemy.status == "alive") {
+					if (
+						projectile.positionX + projectile.spriteWidth <=
+							enemy.positionX + enemy.spriteWidth + projectile.spriteWidth &&
+						projectile.positionX >= enemy.positionX - projectile.spriteWidth
+					) {
+						if (
+							projectile.positionY >=
+								enemy.positionY - projectile.spriteHeight &&
+							projectile.positionY + projectile.spriteHeight <=
+								enemy.positionY + enemy.spriteHeight + projectile.spriteHeight
+						) {
+							playerProjectiles.splice(projectileIndex, 1)
+							projectile.clear()
+							enemy.explode()
+						}
+					}
+				}
+			})
+		})
+	}
+}
+const checkPlayerColisions = (projectile, player) => {
+	if (
+		projectile.positionY <= player.positionY &&
+		projectile.positionY >= player.positionY
+	) {
+		return true
+	}
+}
+
+// loops
+
 setInterval(() => {
-  player.draw()
+	checkEnemyColisions()
+}, 150)
 
-  projectiles.forEach((projectil) => {
-    projectil.update()
-  })
-}, 33)
+setInterval(() => {
+	player.draw()
+	playerProjectiles.forEach((projectil, index) => {
+		if (projectil.update() == "remove") {
+			playerProjectiles.splice(index, 1)
+		}
+	})
+	enemyProjectiles.forEach((projectil, index) => {
+		if (projectil.update() == "remove") {
+			enemyProjectiles.splice(index, 1)
+		}
+	})
+
+	enemyShip.update()
+}, 40)
+
+setInterval(() => {
+	enemyGrid.forEach((enemyColumn) => {
+		enemyColumn.update()
+	})
+}, 500)
