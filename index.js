@@ -2,6 +2,7 @@ const canvas = document.querySelector("canvas")
 const ctx = canvas.getContext("2d")
 const canvasHeight = 500
 const canvasWidth = 500
+let projectiles = []
 
 const clearScreen = () => {
   ctx.fillStyle = "#000"
@@ -11,7 +12,6 @@ const clearScreen = () => {
   ctx.lineWidth = 5
   ctx.strokeRect(0, 0, canvasWidth, canvasHeight)
 }
-
 const printHud = (score, hiScore, lives) => {
   ctx.fillStyle = "#fff"
   ctx.font = "400 20px Arcade"
@@ -32,7 +32,6 @@ const printHud = (score, hiScore, lives) => {
   ctx.lineTo(canvasWidth - 30, canvasHeight - 40)
   ctx.stroke()
 }
-
 const startGame = () => {
   ctx.drawImage(playerSprite, 100, 100)
   ctx.drawImage(enemySprite, 150, 150)
@@ -40,6 +39,7 @@ const startGame = () => {
   ctx.drawImage(enemy3Sprite, 250, 250)
   ctx.drawImage(enemyShipSprite, 300, 300)
 }
+
 class Player {
   constructor() {
     this.positionX = canvasWidth / 2 - 8
@@ -50,6 +50,10 @@ class Player {
       this.sprite = sprite
       this.draw()
     }
+  }
+  shot() {
+    const Xaxis = this.positionX + 15
+    const Yaxis = 19
   }
 
   setPosition() {
@@ -70,6 +74,56 @@ class Player {
   }
 }
 
+class Projectile {
+  constructor(type, positionX, positionY, velocity) {
+    this.positionX = positionX
+    this.positionY = positionY
+    this.velocity = velocity
+
+    const sprite = new Image()
+    sprite.src = `./assets/sprites/projectile${type}.png`
+    sprite.onload = () => {
+      this.sprite = sprite
+    }
+  }
+  draw() {
+    if (this.sprite) {
+      ctx.drawImage(this.sprite, this.positionX, this.positionY)
+    }
+  }
+
+  update() {
+    const newPositionY = this.positionY + this.velocity * 3
+    if (newPositionY < 470 && newPositionY > 60) {
+      ctx.fillStyle = "#000"
+      ctx.fillRect(this.positionX, this.positionY, 10, 17)
+      this.positionX = this.positionX
+      this.positionY = newPositionY
+      this.draw()
+    }
+  }
+}
+class Enemy {
+  constructor(type) {
+    const sprite = new Image()
+    sprite.src = `enemy${type}.png`
+    sprite.onload = () => {
+      this.sprite = sprite
+    }
+  }
+
+  shot() {}
+  draw() {
+    if (this.sprite) {
+      ctx.drawImage(this.sprite, 100, 100)
+    }
+  }
+}
+
+class EnemyWave {
+  constructor(type) {}
+  draw() {}
+}
 clearScreen()
 printHud()
 
@@ -84,13 +138,19 @@ window.addEventListener("keydown", ({ key }) => {
   } else if (key == "ArrowRight" || key == "d") {
     player.velocity = 1
   } else if ((key = " ")) {
+    const shoot = new Projectile(1, 250, 400, -1)
+    projectiles.push(shoot)
+    console.log(projectiles)
   }
 })
 
 window.addEventListener("keyup", () => {
   player.velocity = 0
 })
-
 setInterval(() => {
   player.draw()
+
+  projectiles.forEach((projectil) => {
+    projectil.update()
+  })
 }, 33)
