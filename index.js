@@ -51,6 +51,8 @@ class Player {
 			this.draw()
 		}
 	}
+	deathSound = new Audio("./assets/sounds/explosion.wav")
+	shotSound = new Audio("./assets/sounds/shoot.wav")
 	spriteWidth = 30
 	spriteHeight = 16
 	positionY = canvasHeight - 60
@@ -58,12 +60,13 @@ class Player {
 		if (!this.shootCooldown) {
 			const Xaxis = this.positionX + 13
 			const Yaxis = 425
-			const projectile = new Projectile(2, Xaxis, Yaxis, -1)
+			const projectile = new Projectile(2, Xaxis, Yaxis, -2)
+			this.shotSound.play()
 			playerProjectiles.push(projectile)
 			this.shootCooldown = true
 			setTimeout(() => {
 				this.shootCooldown = false
-			}, 1000)
+			}, 200)
 		}
 	}
 	clear() {
@@ -73,6 +76,7 @@ class Player {
 
 	explode() {
 		this.clear()
+		this.deathSound.play()
 		this.lives--
 		this.positionX = canvasWidth / 2 - 8
 		console.log(this.lives)
@@ -180,7 +184,7 @@ class Enemy {
 		this.explodeSprite = new Image()
 		this.explodeSprite.src = "./assets/sprites/explosion.png"
 	}
-
+	explosionSound = new Audio("./assets/sounds/invaderkilled.wav")
 	shot() {
 		const Xaxis = this.positionX + this.spriteWidth / 2
 		const Yaxis = this.positionY + this.spriteHeight + 2
@@ -198,6 +202,7 @@ class Enemy {
 	}
 	explode() {
 		this.clear()
+		this.explosionSound.play()
 		this.status = "dead"
 		this.sprite = this.explodeSprite
 		this.spriteHeight = 14
@@ -249,11 +254,15 @@ class EnemyShip {
 		this.spriteExplosion = new Image()
 		this.spriteExplosion.src = "./assets/sprites/ship-explosion.png"
 	}
+	flySound = new Audio("./assets/sounds/ufo_lowpitch.wav")
+	explosionSound = new Audio("./assets/sounds/ufo_highpitch.wav")
 	spriteHeight = 16
 	spriteWidth = 32
 	visible = false
 	explode() {
 		this.visible = false
+		this.explosionSound.play()
+		this.flySound.pause()
 		this.clear()
 		this.sprite = this.spriteExplosion
 		this.spriteWidth = 42
@@ -271,7 +280,9 @@ class EnemyShip {
 		setTimeout(() => {
 			this.visible = true
 			this.positionX = canvasWidth
-		}, Math.floor(Math.random() * 20000))
+			this.flySound.loop = true
+			this.flySound.play()
+		}, Math.floor(Math.random() * 10000))
 	}
 
 	clear() {
@@ -292,6 +303,7 @@ class EnemyShip {
 				this.draw()
 			} else {
 				this.visible = false
+				this.flySound.pause()
 				this.delaySpawn()
 			}
 		}
@@ -353,7 +365,6 @@ const checkEnemyColisions = () => {
 					projectile.positionX + projectile.spriteWidth >= column.positionX &&
 					projectile.positionX <= column.positionX + 24
 				) {
-					console.log("paso por aqui")
 					column.enemies.forEach((enemy, enemyIndex) => {
 						if (enemy.status == "alive") {
 							if (
@@ -414,9 +425,9 @@ const checkShipColisions = () => {
 						enemyShip.positionX &&
 					projectile.positionX <= enemyShip.positionX + enemyShip.spriteWidth
 				) {
+					enemyShip.explode()
 					projectile.clear()
 					playerProjectiles.splice(projectileIndex, 1)
-					enemyShip.explode()
 				}
 			}
 		})
@@ -454,7 +465,7 @@ setInterval(() => {
 		checkShipColisions()
 	}
 	checkEnemyColisions()
-}, 150)
+}, 70)
 
 setInterval(() => {
 	player.draw()
