@@ -35,7 +35,7 @@ const startGame = () => {
   ctx.drawImage(enemySprite, 150, 150)
   ctx.drawImage(enemy2Sprite, 200, 200)
   ctx.drawImage(enemy3Sprite, 250, 250)
-  ctx.drawImage(enemyShipSprite, 300, 300)
+  ctx.drawImage(ufoSprite, 300, 300)
 }
 
 class Player {
@@ -51,6 +51,8 @@ class Player {
       this.draw()
     }
   }
+  deathSound = new Audio("./assets/sounds/explosion.wav")
+  shotSound = new Audio("./assets/sounds/shoot.wav")
   spriteWidth = 30
   spriteHeight = 16
   positionY = canvasHeight - 60
@@ -58,12 +60,13 @@ class Player {
     if (!this.shootCooldown) {
       const Xaxis = this.positionX + 13
       const Yaxis = 425
-      const projectile = new Projectile(2, Xaxis, Yaxis, -1)
+      const projectile = new Projectile(2, Xaxis, Yaxis, -2)
+      this.shotSound.play()
       playerProjectiles.push(projectile)
       this.shootCooldown = true
       setTimeout(() => {
         this.shootCooldown = false
-      }, 1000)
+      }, 200)
     }
   }
   clear() {
@@ -73,6 +76,7 @@ class Player {
 
   explode() {
     this.clear()
+    this.deathSound.play()
     this.lives--
     this.positionX = canvasWidth / 2 - 8
     console.log(this.lives)
@@ -162,13 +166,6 @@ class Projectile {
 }
 class Enemy {
   constructor(type) {
-    if (type == 1) {
-      this.spriteWidth = 16
-    } else if (type == 2) {
-      this.spriteWidth = 22
-    } else {
-      this.spriteWidth = 24
-    }
     this.spriteHeight = 16
     this.actualFrame = 0
     this.status = "alive"
@@ -180,7 +177,7 @@ class Enemy {
     this.explodeSprite = new Image()
     this.explodeSprite.src = "./assets/sprites/explosion.png"
   }
-
+  explosionSound = new Audio("./assets/sounds/invaderkilled.wav")
   shot() {
     const Xaxis = this.positionX + this.spriteWidth / 2
     const Yaxis = this.positionY + this.spriteHeight + 2
@@ -198,11 +195,13 @@ class Enemy {
   }
   explode() {
     this.clear()
+    this.explosionSound.play()
     this.status = "dead"
     this.sprite = this.explodeSprite
     this.spriteHeight = 14
     this.spriteWidth = 24
     this.draw()
+    points += 100
     setTimeout(() => {
       this.clear()
     }, 500)
@@ -233,7 +232,7 @@ class Enemy {
   }
 }
 
-class EnemyShip {
+class Ufo {
   constructor() {
     this.positionX = canvasWidth
     this.positionY = 100
@@ -249,11 +248,15 @@ class EnemyShip {
     this.spriteExplosion = new Image()
     this.spriteExplosion.src = "./assets/sprites/ship-explosion.png"
   }
+  flySound = new Audio("./assets/sounds/ufo_lowpitch.wav")
+  explosionSound = new Audio("./assets/sounds/ufo_highpitch.wav")
   spriteHeight = 16
   spriteWidth = 32
   visible = false
   explode() {
     this.visible = false
+    this.explosionSound.play()
+    this.flySound.pause()
     this.clear()
     this.sprite = this.spriteExplosion
     this.spriteWidth = 42
@@ -271,7 +274,9 @@ class EnemyShip {
     setTimeout(() => {
       this.visible = true
       this.positionX = canvasWidth
-    }, Math.floor(Math.random() * 20000))
+      this.flySound.loop = true
+      this.flySound.play()
+    }, Math.floor(Math.random() * 40000))
   }
 
   clear() {
@@ -283,6 +288,7 @@ class EnemyShip {
       this.spriteHeight
     )
   }
+
   update() {
     if (this.visible) {
       this.clear()
@@ -292,6 +298,7 @@ class EnemyShip {
         this.draw()
       } else {
         this.visible = false
+        this.flySound.pause()
         this.delaySpawn()
       }
     }
@@ -305,9 +312,8 @@ class EnemyShip {
 }
 
 class EnemyColumn {
-  constructor(positionX, velocity) {
+  constructor(positionX) {
     this.positionX = positionX
-    this.velocity = velocity
     this.enemies = [
       new Enemy(3),
       new Enemy(3),
@@ -316,54 +322,123 @@ class EnemyColumn {
       new Enemy(1),
     ]
   }
+  status = "alive"
   positionY = 300
-  update() {
-    this.enemies.forEach((enemy, index) => {
-      setTimeout(() => {
-        enemy.update(this.positionX, this.positionY - index * 40)
-      }, index * 100)
-    })
-    this.positionX += this.velocity * 10
+  checkStatus() {
+    if (this.enemies.every((enemy) => enemy.status == "dead")) {
+      this.status = "dead"
+    } else {
+      this.status = "alive"
+    }
+  }
+  update(velocity) {
+    this.checkStatus()
+    if (this.status == "alive") {
+      this.enemies.forEach((enemy, index) => {
+        setTimeout(() => {
+          enemy.update(this.positionX, this.positionY - index * 40)
+        }, index * 100)
+      })
+    }
+    this.positionX += velocity * 10
   }
 }
+
+class EnemyWave {
+  constructor(velocity) {
+    this.velocity = velocity
+    this.columns = [
+      new EnemyColumn(50),
+      new EnemyColumn(100),
+      new EnemyColumn(150),
+      new EnemyColumn(200),
+      new EnemyColumn(250),
+      new EnemyColumn(300),
+      new EnemyColumn(350),
+    ]
+    this.columnsStatus = [
+      "alive",
+      "alive",
+      "alive",
+      "alive",
+      "alive",
+      "alive",
+      "alive",
+    ]
+  }
+
+  leftLimit = 30
+  rightLimit = canvasWidth - 30
+
+  update() {
+    if (!this.columnsStatus.every((status) => status == "dead")) {
+      // Get columns positions
+      let lastColumnPositionX =
+        this.columns[this.columnsStatus.lastIndexOf("alive")].positionX + 24
+      let firstColumnPositionX =
+        this.columns[this.columnsStatus.indexOf("alive")].positionX
+
+      // Check if columns are out of screen and change the velocity
+      if (this.velocity == -1 && firstColumnPositionX < this.leftLimit) {
+        this.velocity = 1
+      } else if (this.velocity == 1 && lastColumnPositionX > this.rightLimit) {
+        this.velocity = -1
+      }
+    }
+
+    this.columns.forEach((column, index) => {
+      if (column.status == "alive") {
+        column.update(this.velocity)
+      } else {
+        this.columnsStatus[index] = "dead"
+      }
+    })
+  }
+}
+
+let points = 0
 clearScreen()
-printHud()
+printHud("000000", "15000", "3")
 
 const player = new Player()
 const ismoving = false
 
-const enemyShip = new EnemyShip()
-const enemyGrid = [
-  new EnemyColumn(50, 1),
-  new EnemyColumn(100, 1),
-  new EnemyColumn(150, 1),
-  new EnemyColumn(200, 1),
-  new EnemyColumn(250, 1),
-  new EnemyColumn(300, 1),
-  new EnemyColumn(350, 1),
-]
+const ufo = new Ufo()
+const enemyGrid = new EnemyWave(1)
 
+// collision detection
 const checkEnemyColisions = () => {
   if (playerProjectiles.length > 0) {
     playerProjectiles.forEach((projectile, projectileIndex) => {
-      enemyGrid[0].enemies.forEach((enemy) => {
-        if (enemy.status == "alive") {
-          if (
-            projectile.positionX + projectile.spriteWidth <=
-              enemy.positionX + enemy.spriteWidth + projectile.spriteWidth &&
-            projectile.positionX >= enemy.positionX - projectile.spriteWidth
-          ) {
-            if (
-              projectile.positionY >=
-                enemy.positionY - projectile.spriteHeight &&
-              projectile.positionY + projectile.spriteHeight <=
-                enemy.positionY + enemy.spriteHeight + projectile.spriteHeight
-            ) {
-              playerProjectiles.splice(projectileIndex, 1)
-              projectile.clear()
-              enemy.explode()
+      enemyGrid.columns.forEach((column, columnIndex) => {
+        if (
+          projectile.positionX + projectile.spriteWidth >= column.positionX &&
+          projectile.positionX <= column.positionX + 24
+        ) {
+          column.enemies.forEach((enemy, enemyIndex) => {
+            if (enemy.status == "alive") {
+              if (
+                projectile.positionX + projectile.spriteWidth <=
+                  enemy.positionX +
+                    enemy.spriteWidth +
+                    projectile.spriteWidth &&
+                projectile.positionX >= enemy.positionX - projectile.spriteWidth
+              ) {
+                if (
+                  projectile.positionY >=
+                    enemy.positionY - projectile.spriteHeight &&
+                  projectile.positionY + projectile.spriteHeight <=
+                    enemy.positionY +
+                      enemy.spriteHeight +
+                      projectile.spriteHeight
+                ) {
+                  playerProjectiles.splice(projectileIndex, 1)
+                  projectile.clear()
+                  enemy.explode()
+                }
+              }
             }
-          }
+          })
         }
       })
     })
@@ -389,21 +464,19 @@ const checkPlayerColisions = () => {
   }
 }
 const checkShipColisions = () => {
-  if (enemyShip.visible) {
+  if (ufo.visible) {
     playerProjectiles.forEach((projectile, projectileIndex) => {
       if (
-        projectile.positionY <= enemyShip.positionY + enemyShip.spriteHeight &&
-        projectile.positionY + projectile.spriteHeight >= enemyShip.positionY
+        projectile.positionY <= ufo.positionY + ufo.spriteHeight &&
+        projectile.positionY + projectile.spriteHeight >= ufo.positionY
       ) {
         if (
-          projectile.positionX + projectile.spriteWidth >=
-            enemyShip.positionX &&
-          projectile.positionX <= enemyShip.positionX + enemyShip.spriteWidth
+          projectile.positionX + projectile.spriteWidth >= ufo.positionX &&
+          projectile.positionX <= ufo.positionX + ufo.spriteWidth
         ) {
-          console.log("hit ship")
+          ufo.explode()
           projectile.clear()
           playerProjectiles.splice(projectileIndex, 1)
-          enemyShip.explode()
         }
       }
     })
@@ -430,18 +503,18 @@ window.addEventListener("keyup", ({ key }) => {
     }
   }
 })
-// loops
 
+// loops
 setInterval(() => {
   checkPlayerColisions()
 }, 50)
 
 setInterval(() => {
-  if (enemyShip.visible) {
+  if (ufo.visible) {
     checkShipColisions()
   }
   checkEnemyColisions()
-}, 150)
+}, 40)
 
 setInterval(() => {
   player.draw()
@@ -456,11 +529,117 @@ setInterval(() => {
     }
   })
 
-  enemyShip.update()
+  ufo.update()
 }, 40)
 
 setInterval(() => {
-  enemyGrid.forEach((enemyColumn) => {
-    enemyColumn.update()
-  })
+  enemyGrid.update()
 }, 500)
+
+//
+
+class Entity {
+  constructor(spriteWidth, spriteHeight) {
+    this.spriteWidth = spriteWidth
+    this.spriteHeight = spriteHeight
+  }
+  clear() {
+    ctx.fillStyle = "#000"
+    ctx.fillRect(
+      this.positionX,
+      this.positionY,
+      this.spriteWidth,
+      this.spriteHeight
+    )
+  }
+  draw() {
+    if (this.sprite) {
+      ctx.drawImage(this.sprite, this.positionX, this.positionY)
+    }
+  }
+  update() {}
+}
+
+class Ufo2 extends Entity {
+  constructor() {
+    super(32, 14)
+    let sprite = new Image()
+    sprite.src = "./assets/sprites/enemy-ship.png"
+    sprite.onload = () => {
+      this.sprite = sprite
+      console.log(this)
+    }
+    this.spriteExplosion = new Image()
+    this.spriteExplosion.src = "./assets/sprites/ship-explosion.png"
+    this.visible = false
+    this.delaySpawn()
+    this.velocity = 1
+  }
+  positionX = canvasHeight
+  positionY = 100
+  flySound = new Audio("./assets/sounds/ufo_lowpitch.wav")
+  explosionSound = new Audio("./assets/sounds/ufo_highpitch.wav")
+
+  delaySpawn() {
+    setTimeout(() => {
+      this.visible = true
+      this.flySound.loop = true
+      this.flySound.play()
+    }, Math.floor(Math.random() * 40000))
+  }
+}
+
+class Enemy1 extends Entity {
+  constructor(positionX, positionY, spriteWidth, spriteHeight) {
+    super(positionX, positionY, spriteWidth, spriteHeight)
+    this.status = "alive"
+    explodeSprite = new Image()
+    explodeSprite.src = `./assets/sprites/explosion.png`
+    explodeSprite.onload = () => {
+      this.explodeSprite = explodeSprite
+    }
+    explosionSound = new Audio("./assets/sounds/explosion.wav")
+  }
+  shot() {}
+  actualFrame = 0
+  status = "alive"
+}
+
+class EnemyTier1 extends Enemy1 {
+  constructor(positionX, positionY) {
+    super(positionX, positionY, 24, 16)
+    sprite = new Image()
+    sprite.src = "./assets/sprites/enemy3.png"
+    this.sprite.onload = () => {
+      this.sprite = sprite
+    }
+  }
+}
+
+class EnemyTier2 extends Enemy1 {
+  constructor(positionX, positionY) {
+    super(positionX, positionY, 22, 16)
+    sprite = new Image()
+    sprite.src = "./assets/sprites/enemy2.png"
+    this.sprite.onload = () => {
+      this.sprite = sprite
+    }
+  }
+}
+
+class EnemyTier3 extends Enemy1 {
+  constructor(positionX, positionY) {
+    super(positionX, positionY, 16, 16)
+    sprite = new Image()
+    sprite.src = "./assets/sprites/enemy1.png"
+    this.sprite.onload = () => {
+      this.sprite = sprite
+    }
+  }
+}
+
+class Player2 extends Entity {
+  constructor() {
+    super(positionX, positionY, 30, 16)
+  }
+}
