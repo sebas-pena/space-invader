@@ -51,7 +51,7 @@ class Player {
       this.draw()
     }
   }
-  deathSound = new Audio("./assets/sounds/explosion.wav")
+  deadSound = new Audio("./assets/sounds/explosion.wav")
   shotSound = new Audio("./assets/sounds/shoot.wav")
   spriteWidth = 30
   spriteHeight = 16
@@ -76,7 +76,7 @@ class Player {
 
   explode() {
     this.clear()
-    this.deathSound.play()
+    this.deadSound.play()
     this.lives--
     this.positionX = canvasWidth / 2 - 8
     console.log(this.lives)
@@ -400,12 +400,6 @@ let points = 0
 clearScreen()
 printHud("000000", "15000", "3")
 
-const player = new Player()
-const ismoving = false
-
-const ufo = new Ufo()
-const enemyGrid = new EnemyWave(1)
-
 // collision detection
 const checkEnemyColisions = () => {
   if (playerProjectiles.length > 0) {
@@ -505,44 +499,23 @@ window.addEventListener("keyup", ({ key }) => {
 })
 
 // loops
-setInterval(() => {
-  checkPlayerColisions()
-}, 50)
 
-setInterval(() => {
-  if (ufo.visible) {
-    checkShipColisions()
-  }
-  checkEnemyColisions()
-}, 40)
-
-setInterval(() => {
-  player.draw()
-  playerProjectiles.forEach((projectil, index) => {
-    if (projectil.update() == "remove") {
-      playerProjectiles.splice(index, 1)
-    }
-  })
-  enemyProjectiles.forEach((projectil, index) => {
-    if (projectil.update() == "remove") {
-      enemyProjectiles.splice(index, 1)
-    }
-  })
-
-  ufo.update()
-}, 40)
-
-setInterval(() => {
-  enemyGrid.update()
-}, 500)
-
-//
+////////////////////////////
+////////////////////////////
+////////////////////////////
+////////////////////////////
+////////////////////////////
 
 class Entity {
-  constructor(spriteWidth, spriteHeight) {
+  constructor(positionX, positionY, spriteWidth, spriteHeight) {
+    this.positionX = positionX
+    this.positionY = positionY
     this.spriteWidth = spriteWidth
     this.spriteHeight = spriteHeight
   }
+
+  actualFrame = 1
+
   clear() {
     ctx.fillStyle = "#000"
     ctx.fillRect(
@@ -552,17 +525,55 @@ class Entity {
       this.spriteHeight
     )
   }
+
   draw() {
+    console.log(this)
     if (this.sprite) {
-      ctx.drawImage(this.sprite, this.positionX, this.positionY)
+      this.clear()
+      if (this.spriteLength == 1) {
+        console.log("entro aca")
+        ctx.drawImage(this.sprite, this.positionX, this.positionY)
+      } else {
+        console.log(this.actualFrame - 1)
+        ctx.drawImage(
+          this.sprite,
+          this.spriteWidth * (this.actualFrame - 1),
+          0,
+          this.spriteWidth,
+          this.spriteHeight,
+          this.positionX,
+          this.positionY,
+          this.spriteWidth,
+          this.spriteHeight
+        )
+        if (this.actualFrame == this.spriteLenght) {
+          this.actualFrame = 1
+        } else {
+          this.actualFrame++
+        }
+      }
     }
   }
-  update() {}
+}
+
+class Player2 extends Entity {
+  constructor() {
+    super(canvasWidth / 2 - 8, canvasHeight - 60, 30, 16)
+
+    let sprite = new Image()
+    sprite.src = "./assets/sprites/player.png"
+    sprite.onload = () => {
+      this.sprite = sprite
+    }
+  }
+  deadSound = new Audio("./assets/sounds/explosion.wav")
+  shootSound = new Audio("./assets/sounds/shoot.wav")
+  spriteLength = 1
 }
 
 class Ufo2 extends Entity {
   constructor() {
-    super(32, 14)
+    super(500, 100, 32, 14)
     let sprite = new Image()
     sprite.src = "./assets/sprites/enemy-ship.png"
     sprite.onload = () => {
@@ -575,10 +586,9 @@ class Ufo2 extends Entity {
     this.delaySpawn()
     this.velocity = 1
   }
-  positionX = canvasHeight
-  positionY = 100
+  spriteLength = 1
   flySound = new Audio("./assets/sounds/ufo_lowpitch.wav")
-  explosionSound = new Audio("./assets/sounds/ufo_highpitch.wav")
+  deadSound = new Audio("./assets/sounds/ufo_highpitch.wav")
 
   delaySpawn() {
     setTimeout(() => {
@@ -593,24 +603,24 @@ class Enemy1 extends Entity {
   constructor(positionX, positionY, spriteWidth, spriteHeight) {
     super(positionX, positionY, spriteWidth, spriteHeight)
     this.status = "alive"
-    explodeSprite = new Image()
-    explodeSprite.src = `./assets/sprites/explosion.png`
-    explodeSprite.onload = () => {
-      this.explodeSprite = explodeSprite
+    let deadSprite = new Image()
+    deadSprite.src = `./assets/sprites/explosion.png`
+    deadSprite.onload = () => {
+      this.deadSprite = deadSprite
     }
-    explosionSound = new Audio("./assets/sounds/explosion.wav")
   }
+  deadSound = new Audio("./assets/sounds/explosion.wav")
   shot() {}
-  actualFrame = 0
+  spriteLength = 2
   status = "alive"
 }
 
 class EnemyTier1 extends Enemy1 {
   constructor(positionX, positionY) {
     super(positionX, positionY, 24, 16)
-    sprite = new Image()
+    let sprite = new Image()
     sprite.src = "./assets/sprites/enemy3.png"
-    this.sprite.onload = () => {
+    sprite.onload = () => {
       this.sprite = sprite
     }
   }
@@ -619,9 +629,9 @@ class EnemyTier1 extends Enemy1 {
 class EnemyTier2 extends Enemy1 {
   constructor(positionX, positionY) {
     super(positionX, positionY, 22, 16)
-    sprite = new Image()
+    let sprite = new Image()
     sprite.src = "./assets/sprites/enemy2.png"
-    this.sprite.onload = () => {
+    sprite.onload = () => {
       this.sprite = sprite
     }
   }
@@ -630,23 +640,16 @@ class EnemyTier2 extends Enemy1 {
 class EnemyTier3 extends Enemy1 {
   constructor(positionX, positionY) {
     super(positionX, positionY, 16, 16)
-    sprite = new Image()
+    let sprite = new Image()
     sprite.src = "./assets/sprites/enemy1.png"
-    this.sprite.onload = () => {
+    sprite.onload = () => {
       this.sprite = sprite
     }
   }
 }
 
-class Player2 extends Entity {
-  constructor() {
-    super(positionX, positionY, 30, 16)
-  }
-}
-
-;<BrowserRouter>
-  <Routes>
-    <Route path="/" element={<Home />} />
-    <Route path="/products" element={<ProductList />} />
-  </Routes>
-</BrowserRouter>
+let player = new Player2()
+let ufo2 = new Ufo2()
+let ene1 = new EnemyTier1(100, 100)
+let ene2 = new EnemyTier2(100, 200)
+let ene3 = new EnemyTier3(100, 300)
