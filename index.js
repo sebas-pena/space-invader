@@ -643,3 +643,10 @@ class Player2 extends Entity {
     super(positionX, positionY, 30, 16)
   }
 }
+
+;<BrowserRouter>
+  <Routes>
+    <Route path="/" element={<Home />} />
+    <Route path="/products" element={<ProductList />} />
+  </Routes>
+</BrowserRouter>
